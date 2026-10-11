@@ -8,6 +8,7 @@
       this.byResi = new Map();
       this.shapes = [];
       this.selection = null;
+      this.variants = [];
       this.mouse = { x: 0, y: 0 };
       this.onHover = onHover;
       this.onUnhover = onUnhover;
@@ -26,6 +27,7 @@
       v.clear();
       this.shapes = [];
       this.selection = null;
+      this.variants = [];
       this.model = v.addModel(text, format);
 
       // pLDDT lives in the B-factor column; one value per residue, repeated on every atom.
@@ -48,10 +50,21 @@
     }
 
     applyColors() {
-      const plddtColor = AFX.plddtColorFn();
       const sel = this.selection;
+      const showVariants = this.variants.length > 0;
       let colorfunc;
       if (!sel) {
+        // With variants on, wash the pLDDT ribbon toward the background so the spheres lead.
+        const base = AFX.plddtColorFn();
+        const surface = AFX.color('surface');
+        // Washing toward a dark surface darkens, so dark mode needs a lighter touch.
+        const mute = getComputedStyle(document.documentElement).colorScheme === 'dark' ? 0.3 : 0.55;
+        const muted = new Map();
+        const plddtColor = !showVariants ? base : v => {
+          const c = base(v);
+          if (!muted.has(c)) muted.set(c, d3.interpolateRgb(c, surface)(mute));
+          return muted.get(c);
+        };
         colorfunc = atom => plddtColor(atom.b);
       } else {
         const a = AFX.color('sel-a'), b = AFX.color('sel-b'), dim = AFX.color('dimmed');
@@ -60,6 +73,33 @@
         colorfunc = atom => inA(atom.resi) ? a : inB(atom.resi) ? b : dim;
       }
       this.viewer.setStyle({}, { cartoon: { colorfunc, arrows: true } });
+      this.applyVariantStyle();
+    }
+
+    // Variant spheres sit on the side chain's first carbon (Cβ), which points the way the
+    // side chain does: outward on surface residues, inward on buried ones. Glycine has no
+    // side chain, so it uses the backbone Cα. Atom styles (not shapes) keep this fast and hoverable.
+    applyVariantStyle() {
+      if (!this.variants.length) return;
+      const radius = n => (n >= 4 ? 1.7 : n >= 2 ? 1.35 : 1.05);
+      const groups = new Map();
+      for (const p of this.variants) {
+        const r = this.byResi.get(p.pos);
+        if (!r) continue;
+        const key = `${p.show}|${radius(p.count)}|${r.resn === 'GLY' ? 'CA' : 'CB'}`;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(p.pos);
+      }
+      for (const [key, resi] of groups) {
+        const [cls, rad, atom] = key.split('|');
+        this.viewer.addStyle({ resi, atom }, { sphere: { radius: +rad, color: AFX.color(`var-${cls}`) } });
+      }
+    }
+
+    setVariants(positions) {
+      this.variants = positions;
+      this.applyColors();
+      this.viewer.render();
     }
 
     setSelection(sel) {

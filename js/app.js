@@ -3,7 +3,10 @@
   const $ = id => document.getElementById(id);
   const DEFAULT_ID = 'P69905';
 
-  const state = { entry: null, residues: [], byResi: new Map(), pae: null, hover: null, selection: null, token: 0 };
+  const state = {
+    entry: null, residues: [], byResi: new Map(), pae: null, hover: null, selection: null, token: 0,
+    variants: null, variantMode: 'both',
+  };
   let views = null;
 
   // Views are created on first load: 3Dmol needs a visible, sized container.
@@ -50,7 +53,11 @@
 
   function tooltipFor(h) {
     const ri = state.byResi.get(h.i);
-    if (h.type === 'residue') return ri ? AFX.residueTooltip(ri) : '';
+    if (h.type === 'residue') {
+      if (!ri) return '';
+      const vp = state.variants?.byPos.get(h.i);
+      return AFX.residueTooltip(ri) + (vp ? AFX.variantTooltipRows(vp) : '');
+    }
 
     const rj = state.byResi.get(h.j);
     const pae = views.pae.value(h.i, h.j);
@@ -105,6 +112,43 @@
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && state.selection) setSelection(null);
+  });
+
+  // ---------- Variants ----------
+  function setVariantMode(mode) {
+    state.variantMode = mode;
+    const positions = AFX.visibleVariantPositions(state.variants, mode);
+    views.structure.setVariants(positions);
+    views.plddt.setVariants(state.variants, mode);
+    renderVariantToolbar();
+  }
+
+  function renderVariantToolbar() {
+    const el = $('variant-toolbar');
+    const v = state.variants;
+    el.hidden = false;
+    if (!v) {
+      el.innerHTML = `<span class="toolbar-label">Disease variants</span>
+        <span class="muted">None precomputed for this protein. Run <code>scripts/fetch_variants.py ${state.entry.uniprotAccession}</code></span>`;
+      return;
+    }
+    const n = { pathogenic: v.stats.pathogenic || 0, benign: v.stats.benign || 0 };
+    const btn = (mode, inner) =>
+      `<button data-mode="${mode}" aria-pressed="${state.variantMode === mode}">${inner}</button>`;
+    el.innerHTML = `
+      <span class="toolbar-label">Disease variants</span>
+      <div class="segmented" role="group" aria-label="Show disease variants">
+        ${btn('off', 'Off')}
+        ${btn('pathogenic', `<span class="variant-dot pathogenic"></span>Pathogenic <span class="count">${n.pathogenic}</span>`)}
+        ${btn('benign', `<span class="variant-dot benign"></span>Benign <span class="count">${n.benign}</span>`)}
+        ${btn('both', 'Both')}
+      </div>
+      <span class="muted" title="ClinVar labels, missense variants only">${v.byPos.size.toLocaleString()} residues</span>`;
+  }
+
+  $('variant-toolbar').addEventListener('click', e => {
+    const b = e.target.closest('button[data-mode]');
+    if (b) setVariantMode(b.dataset.mode);
   });
 
   // ---------- Status / summary ----------
@@ -168,7 +212,8 @@
       showStatus('loading', entry.uniprotDescription || id,
         `Downloading structure and ${len ? `${len.toLocaleString()}×${len.toLocaleString()} ` : ''}error matrix…`);
 
-      const [structure, pae] = await Promise.allSettled([AFX.fetchStructure(entry), AFX.fetchPAE(entry)]);
+      const [structure, pae, variants] = await Promise.allSettled(
+        [AFX.fetchStructure(entry), AFX.fetchPAE(entry), AFX.fetchVariants(entry.uniprotAccession)]);
       if (stale()) return;
       if (structure.status === 'rejected') throw structure.reason;
 
@@ -184,6 +229,8 @@
       state.byResi = new Map(state.residues.map(r => [r.resi, r]));
       renderSummary(entry, state.residues);
       v.plddt.load(state.residues);
+      state.variants = variants.value || null;
+      setVariantMode(state.variantMode);
 
       if (pae.status === 'fulfilled') {
         state.pae = pae.value;
@@ -222,6 +269,7 @@
     views.plddt.updateTheme();
     if (state.pae) AFX.renderPAELegend($('pae-legend'), state.pae.max);
     renderSelectionChip();
+    if (state.entry) setVariantMode(state.variantMode);
   });
 
   renderPlddtLegend();

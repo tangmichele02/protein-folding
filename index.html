@@ -63,6 +63,7 @@
           <h2>3D structure</h2>
           <div class="legend" id="plddt-legend"></div>
         </header>
+        <div id="variant-toolbar" class="toolbar" hidden></div>
         <div id="viewer" class="viewer"></div>
         <div class="panel-foot">
           <div id="selection-chip" class="selection-chip" hidden></div>
@@ -71,6 +72,7 @@
         <details class="explain">
           <summary>What am I looking at?</summary>
           <p>The ribbon traces the protein's backbone: the chain of amino acids (residues) as AlphaFold predicts it folds. Coils are <em>α-helices</em>, flat arrows are <em>β-strands</em>. Color is <strong>pLDDT</strong>, AlphaFold's confidence in each residue's local shape. Orange stretches are often genuinely floppy ("intrinsically disordered") regions, not just bad predictions.</p>
+          <p><strong>Variants</strong> are single amino-acid changes seen in people, labeled by ClinVar as disease-causing (pathogenic) or harmless (benign). Each sphere sits where that residue's side chain starts, so it points outward on the surface or inward into the core. Bigger spheres mean more distinct substitutions at that position.</p>
         </details>
       </article>
 
@@ -112,6 +114,7 @@
   <script src="js/structure.js"></script>
   <script src="js/pae.js"></script>
   <script src="js/plddt.js"></script>
+  <script src="js/variants.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

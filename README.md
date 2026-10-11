@@ -12,7 +12,8 @@ python3 -m http.server 8000
 # → http://localhost:8000/#P69905
 ```
 
-(Opening `index.html` directly also works in most browsers.) The URL hash is the
+Opening `index.html` directly also works, but without disease variants: browsers block
+reading local data files from a `file://` page. The URL hash is the
 UniProt ID, so links like `#P04637` are shareable.
 
 ## Layout
@@ -22,7 +23,8 @@ UniProt ID, so links like `#P04637` are shareable.
 | `js/api.js` | AlphaFold DB API: metadata → structure + PAE URLs (never hardcoded versions) |
 | `js/structure.js` | 3Dmol.js viewer: pLDDT cartoon (from the B-factor column), hover markers, selection |
 | `js/pae.js` | PAE heatmap: canvas image (mean-pooled to ≤1000 px for large proteins) + SVG overlay |
-| `js/plddt.js` | pLDDT line plot along the sequence |
+| `js/plddt.js` | pLDDT line plot along the sequence, with variant tick lanes |
+| `js/variants.js` | Loads precomputed variants, groups them by residue, builds tooltips |
 | `js/app.js` | Loading, shared hover/selection state, linking |
 | `js/theme.js` | Color tokens (read from CSS), pLDDT bands, tooltip helpers |
 
@@ -32,6 +34,8 @@ UniProt ID, so links like `#P04637` are shareable.
 - Drag a rectangle on the PAE → aligned (violet) and scored (pink) ranges highlighted everywhere
 - Hover a residue in 3D or on the sequence plot → its row/column crosshair on the PAE
 - Drag on the sequence plot → select a range · `Esc` clears
+- Disease variants toggle (Off / Pathogenic / Benign / Both) → spheres at each residue's Cβ
+  (side-chain direction), sized by number of substitutions; ribbon fades so they stand out
 
 ## Variant data (Phase 2)
 

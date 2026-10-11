@@ -1,6 +1,7 @@
 // pLDDT line plot along the sequence, segment-colored by confidence band.
 (function (AFX) {
-  const M = { top: 10, right: 16, bottom: 28, left: 40 };
+  const BASE = { top: 10, right: 16, bottom: 28, left: 40 };
+  const LANE = 13;          // height per variant lane (8px ticks + 5px gap)
 
   class PLDDTView {
     constructor(container, { onHover, onUnhover, onSelect }) {
@@ -12,6 +13,7 @@
       this.gAxes = this.root.append('g');
       this.gSel = this.root.append('g');
       this.gLine = this.root.append('g');
+      this.gRug = this.root.append('g');
       this.gHover = this.root.append('g');
       this.gBrush = this.root.append('g').attr('class', 'brush');
       this.brush = d3.brushX().on('end', e => this.brushEnd(e));
@@ -19,6 +21,8 @@
         .on('mousemove', e => this.mouseMove(e))
         .on('mouseleave', () => this.onUnhover());
       this.residues = [];
+      this.variants = null; this.mode = 'off';
+      this.m = BASE;
       new ResizeObserver(() => this.render()).observe(container);
     }
 
@@ -29,8 +33,22 @@
       this.render();
     }
 
+    setVariants(variants, mode) {
+      this.variants = variants; this.mode = mode;
+      this.render();
+    }
+
+    lanes() {
+      if (!this.variants || this.mode === 'off') return [];
+      return AFX.VARIANT_CLASSES.filter(c => this.mode === 'both' || this.mode === c.key);
+    }
+
     render() {
       if (!this.residues.length) return;
+      const lanes = this.lanes();
+      const M = this.m = lanes.length
+        ? { ...BASE, top: BASE.top + lanes.length * LANE + 12, left: 76 }
+        : BASE;
       const { width, height } = this.container.getBoundingClientRect();
       const w = width - M.left - M.right, h = height - M.top - M.bottom;
       if (w <= 0 || h <= 0) return;
@@ -79,12 +97,33 @@
         .attr('d', d => line(d.pts)).attr('fill', 'none').attr('stroke', d => d.c)
         .attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round');
 
+      this.drawRug(lanes);
+
       this.brush.extent([[0, 0], [w, h]]);
       this.gBrush.call(this.brush);
       this.gBrush.select('.overlay').attr('cursor', 'crosshair');
 
       this.drawSelection();
       this.drawHover();
+    }
+
+    // One lane of ticks per visible class, above the plot. Every position with at least one
+    // substitution of that class gets a tick, so mixed positions appear in both lanes.
+    drawRug(lanes) {
+      this.gRug.selectAll('*').remove();
+      if (!lanes.length) return;
+      const tickW = Math.max(1.5, this.x(2) - this.x(1) - 0.5);
+      lanes.forEach((c, k) => {
+        const y = -(lanes.length - k) * LANE - 12;
+        const g = this.gRug.append('g').attr('transform', `translate(0,${y})`);
+        g.append('text').attr('class', 'threshold-label').attr('x', -8).attr('y', 7)
+          .attr('text-anchor', 'end').text(c.label);
+        const pos = [...this.variants.byPos.values()].filter(p => p[c.key] > 0);
+        g.selectAll('rect').data(pos).join('rect')
+          .attr('x', p => this.x(p.pos) - tickW / 2).attr('width', tickW)
+          .attr('y', 0).attr('height', 8).attr('rx', 0.5)
+          .attr('fill', AFX.color(`var-${c.key}`));
+      });
     }
 
     residueAt(px) {
@@ -96,7 +135,7 @@
     mouseMove(e) {
       if (!this.x) return;
       const [px, py] = d3.pointer(e, this.gBrush.node());
-      if (px < 0 || px > this.w || py < -M.top || py > this.h) return this.onUnhover();
+      if (px < 0 || px > this.w || py < -this.m.top || py > this.h) return this.onUnhover();
       const res = this.byResi.get(this.residueAt(px));
       if (res) this.onHover({ type: 'residue', i: res.resi }, e);
     }
