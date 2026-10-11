@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AlphaFold Explorer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 18c3-1 3-5 6-6s4 3 7 1 2-6 3-8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+        <circle cx="4" cy="18" r="1.8" fill="currentColor"/><circle cx="20" cy="5" r="1.8" fill="currentColor"/>
+      </svg>
+      <span>AlphaFold Explorer</span>
+    </div>
+
+    <form id="search" class="search" autocomplete="off">
+      <input id="search-input" type="text" spellcheck="false" placeholder="UniProt ID, e.g. P69905" aria-label="UniProt accession">
+      <button type="submit">Load</button>
+    </form>
+
+    <nav class="examples" aria-label="Example proteins">
+      <button data-id="P69905">Hemoglobin α</button>
+      <button data-id="P04637">p53</button>
+      <button data-id="P38398">BRCA1</button>
+      <button data-id="P13569">CFTR</button>
+      <button data-id="P0DTC2">SARS-CoV-2 spike</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="summary" class="summary" hidden>
+      <div class="summary-title">
+        <h1 id="protein-name"></h1>
+        <p id="protein-meta" class="muted"></p>
+      </div>
+      <div class="summary-stats">
+        <div class="stat">
+          <span class="stat-label">Residues</span>
+          <span id="stat-length" class="stat-value"></span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Mean pLDDT</span>
+          <span id="stat-plddt" class="stat-value"></span>
+        </div>
+        <div class="stat stat-wide">
+          <span class="stat-label">Residues by confidence</span>
+          <div id="stat-bar" class="conf-bar" role="img"></div>
+        </div>
+      </div>
+    </section>
+
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+
+    <section id="workspace" class="workspace" hidden>
+      <article class="panel panel-structure">
+        <header class="panel-head">
+          <h2>3D structure</h2>
+          <div class="legend" id="plddt-legend"></div>
+        </header>
+        <div id="viewer" class="viewer"></div>
+        <div class="panel-foot">
+          <div id="selection-chip" class="selection-chip" hidden></div>
+          <span class="hint muted">Drag to rotate · scroll to zoom · hover a residue</span>
+        </div>
+        <details class="explain">
+          <summary>What am I looking at?</summary>
+          <p>The ribbon traces the protein's backbone: the chain of amino acids (residues) as AlphaFold predicts it folds. Coils are <em>α-helices</em>, flat arrows are <em>β-strands</em>. Color is <strong>pLDDT</strong>, AlphaFold's confidence in each residue's local shape. Orange stretches are often genuinely floppy ("intrinsically disordered") regions, not just bad predictions.</p>
+        </details>
+      </article>
+
+      <article class="panel panel-pae">
+        <header class="panel-head">
+          <h2>Predicted aligned error</h2>
+          <div class="legend" id="pae-legend"></div>
+        </header>
+        <div id="pae" class="pae">
+          <canvas id="pae-canvas"></canvas>
+          <svg id="pae-overlay"></svg>
+        </div>
+        <div class="panel-foot">
+          <span id="pae-note" class="hint muted"></span>
+          <span class="hint muted">Hover a cell · drag a rectangle to select</span>
+        </div>
+        <details class="explain">
+          <summary>What am I looking at?</summary>
+          <p>Cell (x, y) is AlphaFold's expected error, in ångströms (1 Å = 0.1 nm, about one atom's radius), in the position of residue <em>x</em> if the prediction is superimposed on the true structure at residue <em>y</em>. Dark means the two residues' <em>relative</em> placement is trustworthy. Dark squares along the diagonal are <strong>domains</strong>, independently folded units. Light off-diagonal blocks mean the domains themselves are confident but how they're arranged relative to each other is not.</p>
+        </details>
+      </article>
+
+      <article class="panel panel-plddt">
+        <header class="panel-head">
+          <h2>pLDDT along the sequence</h2>
+          <span class="hint muted">Hover to locate in 3D · drag to select a range</span>
+        </header>
+        <div id="plddt" class="plddt"></div>
+      </article>
+    </section>
+  </main>
+
+  <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/3dmol@2.4.2/build/3Dmol-min.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/structure.js"></script>
+  <script src="js/pae.js"></script>
+  <script src="js/plddt.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
