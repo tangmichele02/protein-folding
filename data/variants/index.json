@@ -1,0 +1,20 @@
+{
+ "P04637": {
+  "gene": "TP53",
+  "pathogenic": 408,
+  "benign": 157,
+  "generated": "2026-10-10"
+ },
+ "P13569": {
+  "gene": "CFTR",
+  "pathogenic": 352,
+  "benign": 26,
+  "generated": "2026-10-10"
+ },
+ "P38398": {
+  "gene": "BRCA1",
+  "pathogenic": 340,
+  "benign": 1137,
+  "generated": "2026-10-10"
+ }
+}

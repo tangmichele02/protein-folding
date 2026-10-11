@@ -33,6 +33,26 @@ UniProt ID, so links like `#P04637` are shareable.
 - Hover a residue in 3D or on the sequence plot → its row/column crosshair on the PAE
 - Drag on the sequence plot → select a range · `Esc` clears
 
+## Variant data (Phase 2)
+
+Disease variants are precomputed, not fetched live: the EBI Proteins API variation
+endpoint is ~55 MB for BRCA1, takes minutes, and ignores its filter parameters.
+
+```sh
+python3 scripts/fetch_variants.py P04637 P38398 P13569   # writes data/variants/*.json
+```
+
+Rules: missense only; **ClinVar** labels only (Ensembl's attach to a genomic position and
+can leak from a different allele); likely pathogenic counts as pathogenic and likely benign
+as benign; uncertain, conflicting, or non-clean entries (e.g. merged with a frameshift) are
+dropped. Raw downloads are cached in `data/raw/` (gitignored).
+
+| Protein | Pathogenic | Benign |
+|---|---|---|
+| p53 (P04637) | 408 | 157 |
+| BRCA1 (P38398) | 340 | 1,137 |
+| CFTR (P13569) | 352 | 26 |
+
 ## Notes
 
 - The prediction API also returns isoforms (e.g. `P38398-2`); the canonical entry is picked by exact accession match.
